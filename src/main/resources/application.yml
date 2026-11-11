@@ -1,0 +1,47 @@
+# =============================================================================
+# PoliMarket API - Configuración de la Aplicación
+# =============================================================================
+
+spring:
+  application:
+    name: polimarket-api
+
+  # --- Datasource (H2 en memoria) ---
+  datasource:
+    url: jdbc:h2:mem:polimarketdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  # --- JPA / Hibernate ---
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # --- Internacionalización (i18n) ---
+  messages:
+    basename: messages
+    encoding: UTF-8
+    cache-duration: 3600
+
+  # --- Consola H2 (solo desarrollo) ---
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# --- Servidor ---
+server:
+  port: 8080
+
+# --- Logging ---
+logging:
+  level:
+    com.polimarket: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
