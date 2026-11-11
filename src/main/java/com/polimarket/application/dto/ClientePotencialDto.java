@@ -22,4 +22,10 @@ public record ClientePotencialDto(
         @Schema(description = "Ciudad de ubicación", example = "Bogotá D.C.")
         String ciudad
 ) {
+    /**
+     * Alias compatible para integración con frontend.
+     */
+    public String getCorreoElectronico() {
+        return correo;
+    }
 }

@@ -488,7 +488,12 @@ function renderizarClientes(clientes, mensaje = null) {
         return;
     }
 
-    clientesContainer.innerHTML = clientes.map(cliente => `
+    clientesContainer.innerHTML = clientes.map(cliente => {
+        const email = cliente.correo || cliente.correoElectronico || '';
+        const telefono = cliente.telefono || '';
+        const ciudad = cliente.ciudad || '';
+
+        return `
         <div class="client-card">
             <div class="client-header">
                 <div class="client-avatar">${cliente.nombre.charAt(0)}</div>
@@ -501,21 +506,22 @@ function renderizarClientes(clientes, mensaje = null) {
                 <div class="client-info-row">
                     <span class="info-icon">📧</span>
                     <span class="info-label">${t('ventas.clientes.card.email', state.idioma)}</span>
-                    <a href="mailto:${cliente.correoElectronico}" class="info-value email-link">${cliente.correoElectronico}</a>
+                    <a href="mailto:${email}" class="info-value email-link">${email}</a>
                 </div>
                 <div class="client-info-row">
                     <span class="info-icon">📞</span>
                     <span class="info-label">${t('ventas.clientes.card.phone', state.idioma)}</span>
-                    <a href="tel:${cliente.telefono}" class="info-value phone-link">${cliente.telefono}</a>
+                    <a href="tel:${telefono}" class="info-value phone-link">${telefono}</a>
                 </div>
                 <div class="client-info-row">
                     <span class="info-icon">📍</span>
                     <span class="info-label">${t('ventas.clientes.card.city', state.idioma)}</span>
-                    <span class="info-value city-tag">${cliente.ciudad}</span>
+                    <span class="info-value city-tag">${ciudad}</span>
                 </div>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 
     if (mensaje) mostrarToast(mensaje, 'success');
 }
