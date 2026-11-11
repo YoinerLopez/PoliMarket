@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PoliMarket</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Header Principal -->
+    <header class="header">
+        <div class="header-container">
+            <div class="logo">
+                <span class="logo-icon">🛒</span>
+                <div>
+                    <h1 data-i18n="app.title">PoliMarket</h1>
+                    <p class="subtitle" data-i18n="app.subtitle">Plataforma de Gestión Comercial y Bodega</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="lang-selector">
+                    <label for="langSelect" data-i18n="lang.label">🌐 Idioma / Language:</label>
+                    <select id="langSelect">
+                        <option value="es" selected>Español (ES)</option>
+                        <option value="en">English (EN)</option>
+                    </select>
+                </div>
+                <div id="userSessionHeader" class="user-session-bar hidden">
+                    <span data-i18n="login.welcome">Sesión activa:</span>
+                    <strong id="sessionUserName">acastro</strong>
+                    <button id="btnLogout" class="btn btn-secondary btn-sm" data-i18n="login.btn.logout">Cerrar Sesión</button>
+                </div>
+                <a href="/swagger-ui.html" target="_blank" class="btn btn-secondary btn-sm">📖 Swagger UI</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Notificaciones Flotantes -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- ============================================================== -->
+    <!-- VISTA 1: INICIO DE SESIÓN (LOGIN) -->
+    <!-- ============================================================== -->
+    <div id="loginView" class="login-wrapper">
+        <div class="login-card">
+            <div class="login-header">
+                <span class="login-avatar">🔐</span>
+                <h2 data-i18n="login.title">Iniciar Sesión</h2>
+                <p data-i18n="login.subtitle">Ingrese sus credenciales de vendedor para acceder a la plataforma.</p>
+            </div>
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="loginUsername" data-i18n="login.user.label">Usuario:</label>
+                    <input type="text" id="loginUsername" data-i18n-placeholder="login.user.placeholder" placeholder="Ej: acastro" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword" data-i18n="login.pass.label">Contraseña:</label>
+                    <input type="password" id="loginPassword" data-i18n-placeholder="login.pass.placeholder" placeholder="Ingrese su contraseña" required>
+                </div>
+                <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-block" data-i18n="login.btn">
+                    Ingresar a la Plataforma
+                </button>
+            </form>
+
+            <div id="loginErrorBox" class="resultado-box error hidden"></div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- VISTA 2: APLICACIÓN COMPLETA (PROTEGIDA POR SESIÓN) -->
+    <!-- ============================================================== -->
+    <div id="appView" class="hidden">
+
+        <!-- Barra de Navegación por Módulos -->
+        <nav class="nav-tabs">
+            <div class="nav-container">
+                <button class="nav-tab active" data-tab="ventas-clientes">
+                    <span class="icon">🤝</span> <span data-i18n="nav.clientes">Clientes Potenciales</span>
+                </button>
+                <button class="nav-tab" data-tab="ventas-productos">
+                    <span class="icon">📦</span> <span data-i18n="nav.productos">Productos Disponibles</span>
+                </button>
+                <button class="nav-tab" data-tab="bodega-inventario">
+                    <span class="icon">🏭</span> <span data-i18n="nav.bodega">Bodega e Inventario</span>
+                </button>
+                <button class="nav-tab" data-tab="rrhh">
+                    <span class="icon">👥</span> <span data-i18n="nav.rrhh">Recursos Humanos</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Contenido Principal -->
+        <main class="main-container">
+
+            <!-- ============================================================== -->
+            <!-- PANEL: Ventas - Clientes Potenciales -->
+            <!-- ============================================================== -->
+            <section id="panel-ventas-clientes" class="tab-panel active">
+                <div class="card">
+                    <div class="card-header">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+                            <div>
+                                <h2 data-i18n="ventas.clientes.title">Cartera de Clientes Potenciales y Contacto</h2>
+                                <p data-i18n="ventas.clientes.desc">Listado de posibles clientes y datos de contacto asignados a su cuenta comercial.</p>
+                            </div>
+                            <button id="btnConsultarClientes" class="btn btn-primary" data-i18n="ventas.clientes.btn.consultar">
+                                🔍 Consultar Cartera
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Listado de Clientes con Contacto Enriquecido -->
+                        <div id="clientesContainer" class="grid-cards">
+                            <p class="placeholder-text" data-i18n="ventas.clientes.placeholder">Presione "Consultar Cartera" para desplegar los contactos.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================== -->
+            <!-- PANEL: Ventas - Productos Disponibles -->
+            <!-- ============================================================== -->
+            <section id="panel-ventas-productos" class="tab-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+                            <div>
+                                <h2 data-i18n="ventas.productos.title">Catálogo de Productos Disponibles para Venta</h2>
+                                <p data-i18n="ventas.productos.desc">Muestra los artículos con existencias en bodega mayores a cero.</p>
+                            </div>
+                            <button id="btnConsultarProductos" class="btn btn-primary" data-i18n="ventas.productos.btn.consultar">
+                                📦 Consultar Productos Disponibles
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Tabla de Productos Disponibles -->
+                        <div id="productosContainer" class="table-responsive">
+                            <p class="placeholder-text" data-i18n="ventas.productos.placeholder">Presione "Consultar Productos Disponibles" para cargar el catálogo.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================== -->
+            <!-- PANEL: Bodega e Inventario -->
+            <!-- ============================================================== -->
+            <section id="panel-bodega-inventario" class="tab-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+                            <div>
+                                <h2 data-i18n="bodega.panel.title">Gestión de Bodega e Inventario</h2>
+                                <p data-i18n="bodega.panel.desc">Control de existencias: consulta el inventario completo, identifica proveedores para reposición y registra movimientos de salida o recarga.</p>
+                            </div>
+                            <button id="btnRefrescarInventario" class="btn btn-secondary" data-i18n="bodega.btn.refrescar">
+                                🔄 Refrescar Inventario
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="proveedorCard" class="card hidden" style="background:#f0fdf4; border:1px solid #86efac; margin-bottom:1.5rem;">
+                            <h3 style="color:#166534; font-size:1.1rem; margin-bottom:0.5rem;" data-i18n="bodega.modal.prov.title">Proveedor Asignado para Reposición</h3>
+                            <p><strong><span data-i18n="bodega.modal.prov.code">Código:</span></strong> <code id="provCodigo"></code></p>
+                            <p><strong><span data-i18n="bodega.modal.prov.name">Empresa:</span></strong> <span id="provNombre"></span></p>
+                        </div>
+
+                        <!-- Tabla de Inventario de Bodega -->
+                        <div id="inventarioContainer" class="table-responsive">
+                            <p class="placeholder-text">Cargando inventario de bodega...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================== -->
+            <!-- PANEL: Recursos Humanos -->
+            <!-- ============================================================== -->
+            <section id="panel-rrhh" class="tab-panel">
+                <div class="card">
+                    <div class="card-header">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+                            <div>
+                                <h2 data-i18n="rrhh.panel.title">Gestión y Autorización de Vendedores</h2>
+                                <p data-i18n="rrhh.panel.desc">Administre las autorizaciones y permisos de acceso para los vendedores y personal comercial.</p>
+                            </div>
+                            <button id="btnRefrescarVendedores" class="btn btn-secondary" data-i18n="rrhh.btn.refrescar">
+                                🔄 Actualizar Lista
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <!-- Aviso de Acceso Restringido (para usuarios sin rol RRHH) -->
+                        <div id="rrhhRestrictedNotice" class="restricted-box hidden">
+                            <div class="restricted-icon">🔒</div>
+                            <h3 data-i18n="rrhh.restricted.title">Acceso Exclusivo de Recursos Humanos</h3>
+                            <p data-i18n="rrhh.restricted.desc">Su cuenta actual no tiene asignado el permiso de Recursos Humanos. Para gestionar y autorizar vendedores, inicie sesión con la cuenta admin.rrhh.</p>
+                        </div>
+
+                        <!-- Contenedor Principal de Administración de Vendedores -->
+                        <div id="rrhhAdminContent">
+                            <div class="table-filter-bar">
+                                <input type="text" id="filtroVendedor" class="table-filter-input" data-i18n-placeholder="rrhh.filter.placeholder" placeholder="🔍 Filtrar usuario por nombre...">
+                            </div>
+
+                            <!-- Tabla de Vendedores con Autorizar / Revocar -->
+                            <div id="tablaVendedoresContainer" class="table-responsive">
+                                <p class="placeholder-text">Cargando nómina de vendedores...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL: Aumentar Stock (Recargar Inventario) -->
+    <!-- ============================================================== -->
+    <div id="modalRecargarStock" class="modal-backdrop hidden">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 data-i18n="modal.recargar.title">Aumentar Stock / Abastecer Inventario</h3>
+                <button type="button" class="modal-close-btn btn-cerrar-modal">&times;</button>
+            </div>
+            <form id="formRecargarStock">
+                <div class="modal-body">
+                    <div class="modal-product-info">
+                        <p><strong><span data-i18n="modal.product">Producto:</span></strong> <span id="modalRecargarProductoNombre"></span> (<code id="modalRecargarProductoCodigo"></code>)</p>
+                        <p><strong><span data-i18n="modal.current.stock">Stock Actual:</span></strong> <span id="modalRecargarStockActual" class="badge"></span></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputCantidadRecargar" data-i18n="modal.recargar.label">Cantidad de unidades a ingresar:</label>
+                        <input type="number" id="inputCantidadRecargar" min="1" max="10000" step="1" value="25" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-cerrar-modal" data-i18n="modal.btn.cancel">Cancelar</button>
+                    <button type="submit" class="btn btn-success" data-i18n="modal.recargar.btn">✓ Confirmar Ingreso</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL: Disminuir Stock (Salida de Mercancía) -->
+    <!-- ============================================================== -->
+    <div id="modalSalidaStock" class="modal-backdrop hidden">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 data-i18n="modal.salida.title">Disminuir Stock / Registrar Salida</h3>
+                <button type="button" class="modal-close-btn btn-cerrar-modal">&times;</button>
+            </div>
+            <form id="formSalidaStock">
+                <div class="modal-body">
+                    <div class="modal-product-info">
+                        <p><strong><span data-i18n="modal.product">Producto:</span></strong> <span id="modalSalidaProductoNombre"></span> (<code id="modalSalidaProductoCodigo"></code>)</p>
+                        <p><strong><span data-i18n="modal.current.stock">Stock Actual:</span></strong> <span id="modalSalidaStockActual" class="badge"></span></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputCantidadSalida" data-i18n="modal.salida.label">Cantidad de unidades a retirar:</label>
+                        <input type="number" id="inputCantidadSalida" min="1" max="1000" step="1" value="1" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-cerrar-modal" data-i18n="modal.btn.cancel">Cancelar</button>
+                    <button type="submit" class="btn btn-danger" data-i18n="modal.salida.btn">✓ Confirmar Salida</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/i18n.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
