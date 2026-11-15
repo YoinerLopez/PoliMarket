@@ -1,80 +1,116 @@
 /**
  * PoliMarket - Cliente Web (JavaScript)
- * Implementa Clean Architecture, Internacionalización (i18n), Control de Acceso por Roles y Modales.
+ * Consume los componentes REST de Autenticación, Ventas, Bodega y Recursos Humanos.
  */
 
 const API_BASE = '/api/v1';
+const STOCK_BAJO = 10;
 
-// Estado global reactivo de la aplicación
 const state = {
-    idioma: localStorage.getItem('polimarket_lang') || 'es',
-    usuarioActivo: sessionStorage.getItem('polimarket_user') || null,
-    rolActivo: sessionStorage.getItem('polimarket_role') || null,
-    permisosActivos: JSON.parse(sessionStorage.getItem('polimarket_permisos') || '[]'),
-    vendedores: [],
+    idioma: leerStorage(localStorage, 'polimarket_lang') || 'es',
+    usuarioActivo: leerStorage(sessionStorage, 'polimarket_user'),
+    rolActivo: leerStorage(sessionStorage, 'polimarket_role'),
+    permisosActivos: JSON.parse(leerStorage(sessionStorage, 'polimarket_permisos') || '[]'),
+    vendedores: null,
     ultimosClientes: null,
     ultimosProductos: null,
     ultimoInventario: null,
+    filtroEstado: 'todos',
     productoSeleccionadoModal: null
 };
 
-// Elementos del DOM - Autenticación y Layout
-const loginView = document.getElementById('loginView');
-const appView = document.getElementById('appView');
-const userSessionHeader = document.getElementById('userSessionHeader');
-const sessionUserName = document.getElementById('sessionUserName');
-const btnLogout = document.getElementById('btnLogout');
-const loginForm = document.getElementById('loginForm');
-const loginUsername = document.getElementById('loginUsername');
-const loginPassword = document.getElementById('loginPassword');
-const btnLoginSubmit = document.getElementById('btnLoginSubmit');
-const loginErrorBox = document.getElementById('loginErrorBox');
-const loginQuickBtns = document.querySelectorAll('.login-quick-btn');
+const $ = (id) => document.getElementById(id);
 
-// Elementos Header y Navegación
-const langSelect = document.getElementById('langSelect');
-const navTabs = document.querySelectorAll('.nav-tab');
+// Layout y sesión
+const loginView = $('loginView');
+const appView = $('appView');
+const userSessionHeader = $('userSessionHeader');
+const loginForm = $('loginForm');
+const loginUsername = $('loginUsername');
+const loginPassword = $('loginPassword');
+const btnLoginSubmit = $('btnLoginSubmit');
+const loginErrorBox = $('loginErrorBox');
+const langSelect = $('langSelect');
+const navTabs = document.querySelectorAll('.nav-tab[data-tab]');
 const tabPanels = document.querySelectorAll('.tab-panel');
 
-// Elementos RRHH (Gestión de Vendedores con Roles y Permisos)
-const rrhhRestrictedNotice = document.getElementById('rrhhRestrictedNotice');
-const rrhhAdminContent = document.getElementById('rrhhAdminContent');
-const filtroVendedor = document.getElementById('filtroVendedor');
-const btnRefrescarVendedores = document.getElementById('btnRefrescarVendedores');
-const tablaVendedoresContainer = document.getElementById('tablaVendedoresContainer');
+// Contenedores
+const clientesContainer = $('clientesContainer');
+const productosContainer = $('productosContainer');
+const inventarioContainer = $('inventarioContainer');
+const tablaVendedoresContainer = $('tablaVendedoresContainer');
+const proveedorCard = $('proveedorCard');
 
-// Elementos Ventas Clientes
-const btnConsultarClientes = document.getElementById('btnConsultarClientes');
-const clientesContainer = document.getElementById('clientesContainer');
-
-// Elementos Ventas Productos
-const btnConsultarProductos = document.getElementById('btnConsultarProductos');
-const productosContainer = document.getElementById('productosContainer');
-
-// Elementos Bodega e Inventario
-const btnRefrescarInventario = document.getElementById('btnRefrescarInventario');
-const inventarioContainer = document.getElementById('inventarioContainer');
-const proveedorCard = document.getElementById('proveedorCard');
-const provCodigo = document.getElementById('provCodigo');
-const provNombre = document.getElementById('provNombre');
-
-// Elementos Modales de Inventario
-const modalRecargarStock = document.getElementById('modalRecargarStock');
-const formRecargarStock = document.getElementById('formRecargarStock');
-const modalRecargarProductoNombre = document.getElementById('modalRecargarProductoNombre');
-const modalRecargarProductoCodigo = document.getElementById('modalRecargarProductoCodigo');
-const modalRecargarStockActual = document.getElementById('modalRecargarStockActual');
-const inputCantidadRecargar = document.getElementById('inputCantidadRecargar');
-
-const modalSalidaStock = document.getElementById('modalSalidaStock');
-const formSalidaStock = document.getElementById('formSalidaStock');
-const modalSalidaProductoNombre = document.getElementById('modalSalidaProductoNombre');
-const modalSalidaProductoCodigo = document.getElementById('modalSalidaProductoCodigo');
-const modalSalidaStockActual = document.getElementById('modalSalidaStockActual');
-const inputCantidadSalida = document.getElementById('inputCantidadSalida');
+// Modales
+const modalRecargarStock = $('modalRecargarStock');
+const modalSalidaStock = $('modalSalidaStock');
+const inputCantidadRecargar = $('inputCantidadRecargar');
+const inputCantidadSalida = $('inputCantidadSalida');
 
 // =========================================================================
-// Ciclo de Vida e Inicialización
+// Utilidades
+// =========================================================================
+
+function leerStorage(storage, clave) {
+    try { return storage.getItem(clave); } catch { return null; }
+}
+
+function guardarStorage(storage, clave, valor) {
+    try { storage.setItem(clave, valor); } catch { /* almacenamiento no disponible */ }
+}
+
+const tr = (key) => t(key, state.idioma);
+
+function esc(valor) {
+    return String(valor ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function normalizar(texto) {
+    return String(texto ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function getHeaders() {
+    return {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Accept-Language': state.idioma
+    };
+}
+
+async function api(ruta, opciones = {}) {
+    const response = await fetch(`${API_BASE}${ruta}`, { headers: getHeaders(), ...opciones });
+    const data = await response.json().catch(() => ({ exitoso: false, mensaje: tr('msg.conn.error') }));
+    return { ok: response.ok && data.exitoso, status: response.status, data };
+}
+
+function placeholder(contenedor, texto, esError = false) {
+    contenedor.innerHTML = `<p class="placeholder-text${esError ? ' error' : ''}">${esc(texto)}</p>`;
+}
+
+function estadoStock(cantidad) {
+    if (cantidad === 0) return 'agotado';
+    if (cantidad < STOCK_BAJO) return 'bajo';
+    return 'disponible';
+}
+
+const ESTADO_UI = {
+    disponible: { badge: 'badge-success', texto: 'bodega.status.available', barra: '' },
+    bajo: { badge: 'badge-warning', texto: 'bodega.status.low', barra: 'low' },
+    agotado: { badge: 'badge-danger', texto: 'bodega.status.out', barra: 'out' }
+};
+
+function celdaStock(cantidad, maximo) {
+    const estado = estadoStock(cantidad);
+    const pct = maximo > 0 ? Math.max(4, Math.round((cantidad / maximo) * 100)) : 0;
+    return `
+        <div class="stock-cell">
+            <span class="stock-bar ${ESTADO_UI[estado].barra} hide-sm"><i style="width:${pct}%"></i></span>
+            <b>${cantidad}</b>
+        </div>`;
+}
+
+// =========================================================================
+// Inicio
 // =========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -90,15 +126,11 @@ document.addEventListener('DOMContentLoaded', () => {
     langSelect.value = state.idioma;
     aplicarTraduccion(state.idioma);
 
-    evaluarEstadoSesion();
+    if (state.usuarioActivo) mostrarAplicacion(); else mostrarLogin();
 });
 
-function evaluarEstadoSesion() {
-    if (state.usuarioActivo) {
-        mostrarAplicacion();
-    } else {
-        mostrarLogin();
-    }
+function esRrhh() {
+    return state.rolActivo === 'RECURSOS_HUMANOS' || state.permisosActivos.includes('GESTION_RRHH');
 }
 
 function mostrarLogin() {
@@ -113,55 +145,48 @@ function mostrarAplicacion() {
     loginView.classList.add('hidden');
     appView.classList.remove('hidden');
     userSessionHeader.classList.remove('hidden');
-    sessionUserName.textContent = `${state.usuarioActivo} (${state.rolActivo || 'USUARIO'})`;
 
-    evaluarPermisosRrhh();
+    $('sessionUserName').textContent = state.usuarioActivo;
+    $('sessionUserRole').textContent = (state.rolActivo || 'VENDEDOR').replace(/_/g, ' ').toLowerCase();
+    $('sessionUserAvatar').textContent = state.usuarioActivo.charAt(0);
 
-    // Cargar automáticamente clientes comerciales al ingresar
-    if (!state.ultimosClientes) {
-        consultarClientes(state.usuarioActivo);
-    }
+    // Solo RRHH ve el módulo de administración de vendedores
+    $('navTabRrhh').classList.toggle('hidden', !esRrhh());
+    $('navSectionAdmin').classList.toggle('hidden', !esRrhh());
+
+    activarTab('ventas-clientes');
 }
 
-function evaluarPermisosRrhh() {
-    const esRRHH = state.rolActivo === 'RECURSOS_HUMANOS' || state.permisosActivos.includes('GESTION_RRHH');
-    if (esRRHH) {
-        rrhhRestrictedNotice.classList.add('hidden');
-        rrhhAdminContent.classList.remove('hidden');
-        cargarVendedores();
-    } else {
-        rrhhRestrictedNotice.classList.remove('hidden');
-        rrhhAdminContent.classList.add('hidden');
-    }
-}
-
-function cerrarSesion(mensaje = null) {
+function cerrarSesion(mensaje = null, tipo = 'error') {
     state.usuarioActivo = null;
     state.rolActivo = null;
     state.permisosActivos = [];
-    sessionStorage.clear();
+    try { sessionStorage.clear(); } catch { /* sin almacenamiento */ }
 
-    state.vendedores = [];
+    state.vendedores = null;
     state.ultimosClientes = null;
     state.ultimosProductos = null;
     state.ultimoInventario = null;
+    loginPassword.value = '';
+    proveedorCard.classList.add('hidden');
+    cerrarModales();
 
     mostrarLogin();
-    if (mensaje) {
-        mostrarToast(mensaje, 'error');
-    }
+    if (mensaje) mostrarToast(mensaje, tipo);
 }
 
 // =========================================================================
-// Módulo de Autenticación (Login)
+// Autenticación
 // =========================================================================
 
 function configurarLogin() {
-    loginQuickBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            loginUsername.value = btn.getAttribute('data-user');
+    document.querySelectorAll('.login-quick-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.login-quick-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            loginUsername.value = btn.dataset.user;
             loginPassword.value = 'password123';
+            btnLoginSubmit.focus();
         });
     });
 
@@ -169,660 +194,536 @@ function configurarLogin() {
         e.preventDefault();
         const username = loginUsername.value.trim();
         const password = loginPassword.value.trim();
-
         if (!username || !password) return;
 
         try {
             btnLoginSubmit.disabled = true;
-            btnLoginSubmit.textContent = t('msg.processing', state.idioma);
+            btnLoginSubmit.textContent = tr('msg.processing');
             loginErrorBox.classList.add('hidden');
 
-            const response = await fetch(`${API_BASE}/auth/login`, {
+            const { ok, data } = await api('/auth/login', {
                 method: 'POST',
-                headers: getHeaders(),
-                body: JSON.stringify({ nombreUsuario: username, password: password })
+                body: JSON.stringify({ nombreUsuario: username, password })
             });
 
-            const data = await response.json();
-
-            if (response.ok && data.exitoso) {
+            if (ok) {
                 state.usuarioActivo = data.datos.nombreUsuario;
                 state.rolActivo = data.datos.rol;
-                state.permisosActivos = (data.datos.permisos || '')
-                    .split(',')
-                    .map(p => p.trim())
-                    .filter(Boolean);
+                state.permisosActivos = (data.datos.permisos || '').split(',').map(p => p.trim()).filter(Boolean);
 
-                sessionStorage.setItem('polimarket_user', state.usuarioActivo);
-                sessionStorage.setItem('polimarket_role', state.rolActivo);
-                sessionStorage.setItem('polimarket_permisos', JSON.stringify(state.permisosActivos));
+                guardarStorage(sessionStorage, 'polimarket_user', state.usuarioActivo);
+                guardarStorage(sessionStorage, 'polimarket_role', state.rolActivo);
+                guardarStorage(sessionStorage, 'polimarket_permisos', JSON.stringify(state.permisosActivos));
 
                 mostrarAplicacion();
                 mostrarToast(data.mensaje, 'success');
             } else {
                 loginErrorBox.textContent = data.mensaje;
                 loginErrorBox.classList.remove('hidden');
-                mostrarToast(data.mensaje, 'error');
             }
-        } catch (error) {
-            loginErrorBox.textContent = t('msg.conn.error', state.idioma);
+        } catch {
+            loginErrorBox.textContent = tr('msg.conn.error');
             loginErrorBox.classList.remove('hidden');
         } finally {
             btnLoginSubmit.disabled = false;
-            btnLoginSubmit.textContent = t('login.btn', state.idioma);
+            btnLoginSubmit.textContent = tr('login.btn');
         }
     });
 
-    btnLogout.addEventListener('click', () => {
-        cerrarSesion('Sesión cerrada correctamente');
-    });
+    $('btnLogout').addEventListener('click', () => cerrarSesion(tr('login.logout.msg'), 'success'));
 }
 
 // =========================================================================
-// Motor de Internacionalización (i18n)
+// Idioma
 // =========================================================================
 
 function configurarIdioma() {
     langSelect.addEventListener('change', (e) => {
         state.idioma = e.target.value;
-        localStorage.setItem('polimarket_lang', state.idioma);
-
+        guardarStorage(localStorage, 'polimarket_lang', state.idioma);
         aplicarTraduccion(state.idioma);
 
-        if (state.vendedores && state.vendedores.length) renderizarTablaVendedores(state.vendedores);
-        if (state.ultimosClientes) renderizarClientes(state.ultimosClientes);
-        if (state.ultimosProductos) renderizarProductos(state.ultimosProductos);
-        if (state.ultimoInventario) renderizarInventario(state.ultimoInventario);
-
-        mostrarToast(t('msg.lang.changed', state.idioma), 'success');
+        if (state.vendedores) renderizarTablaVendedores();
+        if (state.ultimosClientes) renderizarClientes();
+        if (state.ultimosProductos) renderizarProductos();
+        if (state.ultimoInventario) renderizarInventario();
     });
 }
 
 function aplicarTraduccion(lang) {
     document.documentElement.lang = lang;
-
     document.querySelectorAll('[data-i18n]').forEach(el => {
-        const key = el.getAttribute('data-i18n');
-        el.textContent = t(key, lang);
+        el.textContent = t(el.getAttribute('data-i18n'), lang);
     });
-
     document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-        const key = el.getAttribute('data-i18n-placeholder');
-        el.setAttribute('placeholder', t(key, lang));
+        el.setAttribute('placeholder', t(el.getAttribute('data-i18n-placeholder'), lang));
     });
-}
-
-function getHeaders() {
-    return {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Accept-Language': state.idioma
-    };
 }
 
 // =========================================================================
-// Pestañas (Tabs)
+// Navegación
 // =========================================================================
 
 function configurarTabs() {
-    navTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            const targetTab = tab.getAttribute('data-tab');
+    navTabs.forEach(tab => tab.addEventListener('click', () => activarTab(tab.dataset.tab)));
+}
 
-            navTabs.forEach(t => t.classList.remove('active'));
-            tabPanels.forEach(p => p.classList.remove('active'));
+function activarTab(destino) {
+    navTabs.forEach(t => t.classList.toggle('active', t.dataset.tab === destino));
+    tabPanels.forEach(p => p.classList.toggle('active', p.id === `panel-${destino}`));
 
-            tab.classList.add('active');
-            const panel = document.getElementById(`panel-${targetTab}`);
-            if (panel) panel.classList.add('active');
-
-            if (targetTab === 'bodega-inventario' && !state.ultimoInventario) {
-                cargarInventarioBodega();
-            } else if (targetTab === 'rrhh') {
-                evaluarPermisosRrhh();
-            }
-        });
-    });
+    // Cada módulo se carga solo la primera vez que se abre
+    if (destino === 'ventas-clientes' && !state.ultimosClientes) consultarClientes();
+    if (destino === 'ventas-productos' && !state.ultimosProductos) consultarProductosDisponibles();
+    if (destino === 'bodega-inventario' && !state.ultimoInventario) cargarInventarioBodega();
+    if (destino === 'rrhh') evaluarPermisosRrhh();
 }
 
 // =========================================================================
-// Módulo: Recursos Humanos (Tabla de Vendedores con Permisos y Filtro)
+// Recursos Humanos
 // =========================================================================
 
 function configurarRrhh() {
-    btnRefrescarVendedores.addEventListener('click', cargarVendedores);
+    $('btnRefrescarVendedores').addEventListener('click', cargarVendedores);
+    $('filtroVendedor').addEventListener('input', renderizarTablaVendedores);
 
-    filtroVendedor.addEventListener('input', () => {
-        renderizarTablaVendedores(state.vendedores);
+    tablaVendedoresContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-accion]');
+        if (btn) cambiarAutorizacion(btn.dataset.usuario, btn.dataset.accion, btn);
     });
+}
+
+function evaluarPermisosRrhh() {
+    const permitido = esRrhh();
+    $('rrhhRestrictedNotice').classList.toggle('hidden', permitido);
+    $('rrhhAdminContent').classList.toggle('hidden', !permitido);
+    $('btnRefrescarVendedores').classList.toggle('hidden', !permitido);
+    if (permitido && !state.vendedores) cargarVendedores();
 }
 
 async function cargarVendedores() {
+    placeholder(tablaVendedoresContainer, tr('msg.processing'));
     try {
-        tablaVendedoresContainer.innerHTML = `<p class="placeholder-text">${t('msg.processing', state.idioma)}</p>`;
-        const response = await fetch(`${API_BASE}/recursos-humanos/vendedores`, {
-            method: 'GET',
-            headers: getHeaders()
-        });
-
-        const data = await response.json();
-        if (response.ok && data.exitoso) {
+        const { ok, data } = await api('/recursos-humanos/vendedores');
+        if (ok) {
             state.vendedores = data.datos;
-            renderizarTablaVendedores(data.datos);
+            renderizarTablaVendedores();
         } else {
-            tablaVendedoresContainer.innerHTML = `<p class="placeholder-text" style="color:red;">${data.mensaje}</p>`;
+            placeholder(tablaVendedoresContainer, data.mensaje, true);
         }
-    } catch (error) {
-        tablaVendedoresContainer.innerHTML = `<p class="placeholder-text" style="color:red;">${t('msg.conn.error', state.idioma)}</p>`;
+    } catch {
+        placeholder(tablaVendedoresContainer, tr('msg.conn.error'), true);
     }
 }
 
-function renderizarTablaVendedores(vendedores) {
-    if (!vendedores || vendedores.length === 0) {
-        tablaVendedoresContainer.innerHTML = '<p class="placeholder-text">No se encontraron usuarios registrados.</p>';
-        return;
-    }
+function renderizarTablaVendedores() {
+    const vendedores = state.vendedores || [];
+    const comerciales = vendedores.filter(v => v.rol !== 'RECURSOS_HUMANOS');
+    const autorizados = comerciales.filter(v => v.autorizado).length;
 
-    const filtro = filtroVendedor.value.trim().toLowerCase();
-    const filtrados = vendedores.filter(v => v.nombreUsuario.toLowerCase().includes(filtro));
+    $('rrhhStats').innerHTML = `
+        <div class="stat"><small>${tr('rrhh.stat.total')}</small><b>${comerciales.length}</b></div>
+        <div class="stat"><small>${tr('rrhh.stat.ok')}</small><b>${autorizados}</b></div>
+        <div class="stat"><small>${tr('rrhh.stat.pending')}</small><b>${comerciales.length - autorizados}</b></div>`;
 
-    if (filtrados.length === 0) {
-        tablaVendedoresContainer.innerHTML = `<p class="placeholder-text">No se encontraron resultados para "${filtro}".</p>`;
-        return;
-    }
+    if (vendedores.length === 0) return placeholder(tablaVendedoresContainer, tr('rrhh.empty'));
+
+    const filtro = normalizar($('filtroVendedor').value.trim());
+    const filtrados = vendedores.filter(v => normalizar(v.nombreUsuario).includes(filtro));
+    if (filtrados.length === 0) return placeholder(tablaVendedoresContainer, tr('common.no.results'));
 
     tablaVendedoresContainer.innerHTML = `
         <table>
-            <thead>
-                <tr>
-                    <th>${t('rrhh.th.user', state.idioma)}</th>
-                    <th>${t('rrhh.th.role', state.idioma)}</th>
-                    <th>${t('rrhh.th.permissions', state.idioma)}</th>
-                    <th>${t('rrhh.th.status', state.idioma)}</th>
-                    <th>${t('rrhh.th.actions', state.idioma)}</th>
-                </tr>
-            </thead>
+            <thead><tr>
+                <th>${tr('rrhh.th.user')}</th>
+                <th class="hide-sm">${tr('rrhh.th.permissions')}</th>
+                <th>${tr('rrhh.th.status')}</th>
+                <th></th>
+            </tr></thead>
             <tbody>
                 ${filtrados.map(v => {
-                    const badgeClass = v.autorizado ? 'badge-success' : 'badge-danger';
-                    const badgeText = v.autorizado ? t('rrhh.status.authorized', state.idioma) : t('rrhh.status.pending', state.idioma);
                     const esAdmin = v.rol === 'RECURSOS_HUMANOS';
-
+                    const usuario = esc(v.nombreUsuario);
+                    const estado = esAdmin
+                        ? `<span class="badge badge-primary">${esc((v.rol || '').replace(/_/g, ' '))}</span>`
+                        : `<span class="badge ${v.autorizado ? 'badge-success' : 'badge-neutral'}">${tr(v.autorizado ? 'rrhh.status.authorized' : 'rrhh.status.pending')}</span>`;
+                    const accion = esAdmin
+                        ? `<small class="text-muted">${tr('rrhh.protected')}</small>`
+                        : v.autorizado
+                            ? `<button class="btn-link danger" data-accion="revocar" data-usuario="${usuario}">${tr('rrhh.btn.revocar')}</button>`
+                            : `<button class="btn btn-primary btn-sm" data-accion="autorizar" data-usuario="${usuario}">${tr('rrhh.btn.autorizar')}</button>`;
                     return `
                         <tr>
                             <td>
-                                <div style="display:flex; align-items:center; gap:0.5rem;">
-                                    <span style="font-size:1.3rem;">${esAdmin ? '👔' : '👤'}</span>
-                                    <strong><code>${v.nombreUsuario}</code></strong>
+                                <div class="cell-main">
+                                    <span class="user-avatar ${v.autorizado || esAdmin ? '' : 'muted'}">${esc(v.nombreUsuario.charAt(0))}</span>
+                                    <div><strong>${usuario}</strong><small>${esc((v.rol || 'VENDEDOR').replace(/_/g, ' ').toLowerCase())}</small></div>
                                 </div>
                             </td>
-                            <td>
-                                <span class="badge ${esAdmin ? 'badge-primary' : 'badge-secondary'}">
-                                    ${v.rol || 'VENDEDOR'}
-                                </span>
-                            </td>
-                            <td>
-                                <small class="text-muted">${v.permisos || 'VENTAS,BODEGA'}</small>
-                            </td>
-                            <td>
-                                <span class="badge ${badgeClass}">${badgeText}</span>
-                            </td>
-                            <td>
-                                ${!esAdmin ? `
-                                    ${v.autorizado ? `
-                                        <button class="btn btn-danger btn-sm" onclick="accionRevocarVendedor('${v.nombreUsuario}')">
-                                            ${t('rrhh.btn.revocar', state.idioma)}
-                                        </button>
-                                    ` : `
-                                        <button class="btn btn-success btn-sm" onclick="accionAutorizarVendedor('${v.nombreUsuario}')">
-                                            ${t('rrhh.btn.autorizar', state.idioma)}
-                                        </button>
-                                    `}
-                                ` : `
-                                    <small class="text-muted">Protegido</small>
-                                `}
-                            </td>
-                        </tr>
-                    `;
+                            <td class="hide-sm"><small class="text-muted">${esc((v.permisos || '').split(',').join(' · '))}</small></td>
+                            <td>${estado}</td>
+                            <td class="actions">${accion}</td>
+                        </tr>`;
                 }).join('')}
             </tbody>
-        </table>
-    `;
+        </table>`;
 }
 
-window.accionAutorizarVendedor = async function(nombreUsuario) {
+async function cambiarAutorizacion(nombreUsuario, accion, boton) {
+    boton.disabled = true;
     try {
-        const response = await fetch(`${API_BASE}/recursos-humanos/vendedores/${encodeURIComponent(nombreUsuario)}/autorizar`, {
-            method: 'PATCH',
-            headers: getHeaders()
-        });
+        const { ok, data } = await api(`/recursos-humanos/vendedores/${encodeURIComponent(nombreUsuario)}/${accion}`, { method: 'PATCH' });
+        mostrarToast(data.mensaje, ok ? 'success' : 'error');
+        if (!ok) return;
 
-        const data = await response.json();
-        if (response.ok && data.exitoso) {
-            mostrarToast(data.mensaje, 'success');
-            cargarVendedores();
-        } else {
-            mostrarToast(data.mensaje, 'error');
+        await cargarVendedores();
+        if (accion === 'revocar' && state.usuarioActivo === nombreUsuario) {
+            setTimeout(() => cerrarSesion(tr('rrhh.revoked.self')), 1500);
         }
-    } catch (error) {
-        mostrarToast(t('msg.conn.error', state.idioma), 'error');
+    } catch {
+        mostrarToast(tr('msg.conn.error'), 'error');
+    } finally {
+        boton.disabled = false;
     }
-};
-
-window.accionRevocarVendedor = async function(nombreUsuario) {
-    try {
-        const response = await fetch(`${API_BASE}/recursos-humanos/vendedores/${encodeURIComponent(nombreUsuario)}/revocar`, {
-            method: 'PATCH',
-            headers: getHeaders()
-        });
-
-        const data = await response.json();
-        if (response.ok && data.exitoso) {
-            mostrarToast(data.mensaje, 'success');
-            cargarVendedores();
-
-            // Si el usuario conectado fue revocado, cerrar su sesión
-            if (state.usuarioActivo === nombreUsuario) {
-                setTimeout(() => {
-                    cerrarSesion('Su cuenta ha sido desautorizada/revocada por Recursos Humanos.');
-                }, 1500);
-            }
-        } else {
-            mostrarToast(data.mensaje, 'error');
-        }
-    } catch (error) {
-        mostrarToast(t('msg.conn.error', state.idioma), 'error');
-    }
-};
+}
 
 // =========================================================================
-// Módulo: Ventas - Clientes Potenciales
+// Ventas - Clientes Potenciales
 // =========================================================================
 
 function configurarVentasClientes() {
-    btnConsultarClientes.addEventListener('click', () => {
-        if (!state.usuarioActivo) return;
-        consultarClientes(state.usuarioActivo);
+    $('btnConsultarClientes').addEventListener('click', consultarClientes);
+    $('filtroCliente').addEventListener('input', renderizarClientes);
+    $('filtroCiudad').addEventListener('change', renderizarClientes);
+
+    clientesContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-copiar]');
+        if (!btn) return;
+        navigator.clipboard?.writeText(btn.dataset.copiar)
+            .then(() => mostrarToast(tr('ventas.clientes.copied'), 'success'))
+            .catch(() => {});
     });
 }
 
-async function consultarClientes(username) {
+async function consultarClientes() {
+    if (!state.usuarioActivo) return;
+    const boton = $('btnConsultarClientes');
+    boton.disabled = true;
+    placeholder(clientesContainer, tr('ventas.clientes.loading'));
+
     try {
-        btnConsultarClientes.disabled = true;
-        clientesContainer.innerHTML = `<p class="placeholder-text">${t('ventas.clientes.loading', state.idioma)}</p>`;
-
-        const response = await fetch(`${API_BASE}/ventas/clientes-potenciales?nombreUsuario=${encodeURIComponent(username)}`, {
-            method: 'GET',
-            headers: getHeaders()
-        });
-
-        const data = await response.json();
-
-        if (response.status === 403) {
-            cerrarSesion('Sesión no autorizada o revocada.');
-            return;
-        }
-
-        if (response.ok && data.exitoso) {
+        const { ok, data } = await api(`/ventas/clientes-potenciales?nombreUsuario=${encodeURIComponent(state.usuarioActivo)}`);
+        if (ok) {
             state.ultimosClientes = data.datos;
-            renderizarClientes(data.datos, data.mensaje);
+            llenarCiudades(data.datos);
+            renderizarClientes();
         } else {
             state.ultimosClientes = null;
-            clientesContainer.innerHTML = `
-                <div class="resultado-box error" style="grid-column: 1 / -1;">
-                    <strong>${t('msg.access.denied', state.idioma)}</strong> ${data.mensaje}
-                </div>
-            `;
-            mostrarToast(data.mensaje, 'error');
+            placeholder(clientesContainer, `${tr('msg.access.denied')} ${data.mensaje}`, true);
         }
-    } catch (error) {
-        clientesContainer.innerHTML = `<p class="placeholder-text" style="color:red;">${t('msg.conn.error', state.idioma)}</p>`;
+    } catch {
+        placeholder(clientesContainer, tr('msg.conn.error'), true);
     } finally {
-        btnConsultarClientes.disabled = false;
+        boton.disabled = false;
     }
 }
 
-function renderizarClientes(clientes, mensaje = null) {
-    if (!clientes || clientes.length === 0) {
-        clientesContainer.innerHTML = `<p class="placeholder-text">${t('ventas.clientes.empty', state.idioma)}</p>`;
-        return;
-    }
-
-    clientesContainer.innerHTML = clientes.map(cliente => {
-        const email = cliente.correo || cliente.correoElectronico || '';
-        const telefono = cliente.telefono || '';
-        const ciudad = cliente.ciudad || '';
-
-        return `
-        <div class="client-card">
-            <div class="client-header">
-                <div class="client-avatar">${cliente.nombre.charAt(0)}</div>
-                <div class="client-name-box">
-                    <h4>${cliente.nombre}</h4>
-                    <span class="client-id">${t('ventas.clientes.card.id', state.idioma)}${cliente.id}</span>
-                </div>
-            </div>
-            <div class="client-info-list">
-                <div class="client-info-row">
-                    <span class="info-icon">📧</span>
-                    <span class="info-label">${t('ventas.clientes.card.email', state.idioma)}</span>
-                    <a href="mailto:${email}" class="info-value email-link">${email}</a>
-                </div>
-                <div class="client-info-row">
-                    <span class="info-icon">📞</span>
-                    <span class="info-label">${t('ventas.clientes.card.phone', state.idioma)}</span>
-                    <a href="tel:${telefono}" class="info-value phone-link">${telefono}</a>
-                </div>
-                <div class="client-info-row">
-                    <span class="info-icon">📍</span>
-                    <span class="info-label">${t('ventas.clientes.card.city', state.idioma)}</span>
-                    <span class="info-value city-tag">${ciudad}</span>
-                </div>
-            </div>
-        </div>
-        `;
-    }).join('');
-
-    if (mensaje) mostrarToast(mensaje, 'success');
+function llenarCiudades(clientes) {
+    const select = $('filtroCiudad');
+    const actual = select.value;
+    const ciudades = [...new Set(clientes.map(c => c.ciudad).filter(Boolean))].sort();
+    select.innerHTML = `<option value="" data-i18n="ventas.clientes.allCities">${tr('ventas.clientes.allCities')}</option>`
+        + ciudades.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+    select.value = ciudades.includes(actual) ? actual : '';
 }
 
-// =========================================================================
-// Módulo: Ventas - Productos Disponibles
-// =========================================================================
+function renderizarClientes() {
+    const clientes = state.ultimosClientes || [];
+    if (clientes.length === 0) return placeholder(clientesContainer, tr('ventas.clientes.empty'));
 
-function configurarVentasProductos() {
-    btnConsultarProductos.addEventListener('click', () => {
-        if (!state.usuarioActivo) return;
-        consultarProductosDisponibles(state.usuarioActivo);
+    const filtro = normalizar($('filtroCliente').value.trim());
+    const ciudad = $('filtroCiudad').value;
+    const filtrados = clientes.filter(c => {
+        const email = c.correo || c.correoElectronico || '';
+        const texto = normalizar(`${c.nombre} ${email} ${c.telefono}`);
+        return texto.includes(filtro) && (!ciudad || c.ciudad === ciudad);
     });
-}
+    if (filtrados.length === 0) return placeholder(clientesContainer, tr('common.no.results'));
 
-async function consultarProductosDisponibles(username) {
-    try {
-        btnConsultarProductos.disabled = true;
-        productosContainer.innerHTML = `<p class="placeholder-text">${t('ventas.productos.loading', state.idioma)}</p>`;
-
-        const response = await fetch(`${API_BASE}/ventas/productos-disponibles?nombreUsuario=${encodeURIComponent(username)}`, {
-            method: 'GET',
-            headers: getHeaders()
-        });
-
-        const data = await response.json();
-
-        if (response.status === 403) {
-            cerrarSesion('Sesión no autorizada o revocada.');
-            return;
-        }
-
-        if (response.ok && data.exitoso) {
-            state.ultimosProductos = data.datos;
-            renderizarProductos(data.datos, data.mensaje);
-        } else {
-            state.ultimosProductos = null;
-            productosContainer.innerHTML = `
-                <div class="resultado-box error">
-                    <strong>${t('msg.access.denied', state.idioma)}</strong> ${data.mensaje}
-                </div>
-            `;
-            mostrarToast(data.mensaje, 'error');
-        }
-    } catch (error) {
-        productosContainer.innerHTML = `<p class="placeholder-text" style="color:red;">${t('msg.conn.error', state.idioma)}</p>`;
-    } finally {
-        btnConsultarProductos.disabled = false;
-    }
-}
-
-function renderizarProductos(productos, mensaje = null) {
-    if (!productos || productos.length === 0) {
-        productosContainer.innerHTML = `<p class="placeholder-text">${t('ventas.productos.empty', state.idioma)}</p>`;
-        return;
-    }
-
-    productosContainer.innerHTML = `
+    clientesContainer.innerHTML = `
         <table>
-            <thead>
-                <tr>
-                    <th>${t('table.th.code', state.idioma)}</th>
-                    <th>${t('table.th.name', state.idioma)}</th>
-                    <th>${t('table.th.stock', state.idioma)}</th>
-                    <th>${t('table.th.status', state.idioma)}</th>
-                </tr>
-            </thead>
+            <thead><tr>
+                <th>${tr('ventas.clientes.th.client')}</th>
+                <th>${tr('ventas.clientes.th.email')}</th>
+                <th>${tr('ventas.clientes.th.phone')}</th>
+                <th>${tr('ventas.clientes.th.city')}</th>
+                <th></th>
+            </tr></thead>
             <tbody>
-                ${productos.map(p => `
-                    <tr>
-                        <td><code>${p.codigoProducto}</code></td>
-                        <td><strong>${p.nombreProducto}</strong></td>
-                        <td><span class="stock-pill in-stock">📦 ${p.cantidadDisponible} ${t('table.units', state.idioma)}</span></td>
-                        <td><span class="badge badge-success">${t('bodega.status.available', state.idioma)}</span></td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        </table>
-    `;
-
-    if (mensaje) mostrarToast(mensaje, 'success');
-}
-
-// =========================================================================
-// Módulo: Bodega e Inventario
-// =========================================================================
-
-function configurarBodegaInventario() {
-    btnRefrescarInventario.addEventListener('click', cargarInventarioBodega);
-}
-
-async function cargarInventarioBodega() {
-    try {
-        inventarioContainer.innerHTML = '<p class="placeholder-text">Cargando inventario completo...</p>';
-        proveedorCard.classList.add('hidden');
-
-        const response = await fetch(`${API_BASE}/bodega/existencias?incluirAgotados=true`, {
-            method: 'GET',
-            headers: getHeaders()
-        });
-
-        const data = await response.json();
-        if (response.ok && data.exitoso) {
-            state.ultimoInventario = data.datos;
-            renderizarInventario(data.datos);
-        } else {
-            inventarioContainer.innerHTML = `<p class="placeholder-text" style="color:red;">${data.mensaje}</p>`;
-        }
-    } catch (error) {
-        inventarioContainer.innerHTML = '<p class="placeholder-text" style="color:red;">Error de conexión con la API.</p>';
-    }
-}
-
-function renderizarInventario(inventario) {
-    if (!inventario || inventario.length === 0) {
-        inventarioContainer.innerHTML = '<p class="placeholder-text">No se encontraron productos en bodega.</p>';
-        return;
-    }
-
-    inventarioContainer.innerHTML = `
-        <table>
-            <thead>
-                <tr>
-                    <th>${t('bodega.th.code', state.idioma)}</th>
-                    <th>${t('bodega.th.name', state.idioma)}</th>
-                    <th>${t('bodega.th.stock', state.idioma)}</th>
-                    <th>${t('bodega.th.status', state.idioma)}</th>
-                    <th>${t('bodega.th.actions', state.idioma)}</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${inventario.map(item => {
-                    const esAgotado = item.cantidadDisponible === 0;
-                    const esBajo = item.cantidadDisponible > 0 && item.cantidadDisponible < 10;
-                    const badgeClass = esAgotado ? 'badge-danger' : (esBajo ? 'badge-warning' : 'badge-success');
-                    const badgeText = esAgotado ? t('bodega.status.out', state.idioma) : (esBajo ? t('bodega.status.low', state.idioma) : t('bodega.status.available', state.idioma));
-                    const pillClass = esAgotado ? 'out-stock' : 'in-stock';
-
-                    const safeNombre = item.nombreProducto.replace(/'/g, "\\'");
-
+                ${filtrados.map(c => {
+                    const email = c.correo || c.correoElectronico || '';
+                    const contacto = `${c.nombre} · ${email} · ${c.telefono || ''}`;
                     return `
                         <tr>
-                            <td><code>${item.codigoProducto}</code></td>
-                            <td><strong>${item.nombreProducto}</strong></td>
-                            <td><span class="stock-pill ${pillClass}">📦 ${item.cantidadDisponible} ${t('table.units', state.idioma)}</span></td>
-                            <td><span class="badge ${badgeClass}">${badgeText}</span></td>
                             <td>
-                                <div class="stock-actions">
-                                    ${!esAgotado ? `
-                                        <button class="btn btn-secondary btn-sm" onclick="abrirModalSalida('${item.codigoProducto}', '${safeNombre}', ${item.cantidadDisponible})">
-                                            ${t('bodega.btn.retirar', state.idioma)}
-                                        </button>
-                                    ` : ''}
-                                    <button class="btn btn-primary btn-sm" onclick="abrirModalRecargar('${item.codigoProducto}', '${safeNombre}', ${item.cantidadDisponible})">
-                                        ${t('bodega.btn.recargar', state.idioma)}
-                                    </button>
-                                    ${esAgotado ? `
-                                        <button class="btn btn-danger btn-sm" onclick="accionIdentificarProveedor('${item.codigoProducto}')">
-                                            ${t('bodega.btn.proveedor', state.idioma)}
-                                        </button>
-                                    ` : ''}
+                                <div class="cell-main">
+                                    <span class="user-avatar">${esc(c.nombre.charAt(0))}</span>
+                                    <div><strong>${esc(c.nombre)}</strong><small>#${esc(c.id)}</small></div>
                                 </div>
                             </td>
-                        </tr>
-                    `;
+                            <td><a class="contact-link" href="mailto:${esc(email)}">${esc(email)}</a></td>
+                            <td style="white-space:nowrap"><a class="contact-link" href="tel:${esc((c.telefono || '').replace(/\s/g, ''))}">${esc(c.telefono)}</a></td>
+                            <td><span class="badge badge-neutral">${esc(c.ciudad)}</span></td>
+                            <td class="actions"><button class="btn-link" data-copiar="${esc(contacto)}">${tr('ventas.clientes.copy')}</button></td>
+                        </tr>`;
                 }).join('')}
             </tbody>
         </table>
-    `;
+        <div class="table-footer">${filtrados.length} / ${clientes.length} ${tr('ventas.clientes.count')}</div>`;
 }
 
-window.accionIdentificarProveedor = async function(codigoProducto) {
-    try {
-        const response = await fetch(`${API_BASE}/bodega/productos/${encodeURIComponent(codigoProducto)}/proveedor-reposicion`, {
-            method: 'GET',
-            headers: getHeaders()
-        });
+// =========================================================================
+// Ventas - Productos Disponibles
+// =========================================================================
 
-        const data = await response.json();
-        if (response.ok && data.exitoso) {
-            provCodigo.textContent = data.datos.codigo;
-            provNombre.textContent = data.datos.nombre;
-            proveedorCard.classList.remove('hidden');
-            proveedorCard.scrollIntoView({ behavior: 'smooth' });
-            mostrarToast(data.mensaje, 'success');
+function configurarVentasProductos() {
+    $('btnConsultarProductos').addEventListener('click', consultarProductosDisponibles);
+    $('filtroProducto').addEventListener('input', renderizarProductos);
+}
+
+async function consultarProductosDisponibles() {
+    if (!state.usuarioActivo) return;
+    const boton = $('btnConsultarProductos');
+    boton.disabled = true;
+    placeholder(productosContainer, tr('ventas.productos.loading'));
+
+    try {
+        const { ok, data } = await api(`/ventas/productos-disponibles?nombreUsuario=${encodeURIComponent(state.usuarioActivo)}`);
+        if (ok) {
+            state.ultimosProductos = data.datos;
+            renderizarProductos();
         } else {
-            mostrarToast(data.mensaje, 'error');
+            state.ultimosProductos = null;
+            placeholder(productosContainer, `${tr('msg.access.denied')} ${data.mensaje}`, true);
         }
-    } catch (error) {
-        mostrarToast(t('msg.conn.error', state.idioma), 'error');
+    } catch {
+        placeholder(productosContainer, tr('msg.conn.error'), true);
+    } finally {
+        boton.disabled = false;
     }
-};
+}
+
+function renderizarProductos() {
+    const productos = state.ultimosProductos || [];
+    if (productos.length === 0) return placeholder(productosContainer, tr('ventas.productos.empty'));
+
+    const filtro = normalizar($('filtroProducto').value.trim());
+    const filtrados = productos.filter(p => normalizar(`${p.codigoProducto} ${p.nombreProducto}`).includes(filtro));
+    if (filtrados.length === 0) return placeholder(productosContainer, tr('common.no.results'));
+
+    const maximo = Math.max(...productos.map(p => p.cantidadDisponible));
+    productosContainer.innerHTML = `
+        <table>
+            <thead><tr>
+                <th>${tr('table.th.name')}</th>
+                <th>${tr('table.th.status')}</th>
+                <th class="num">${tr('table.th.stock')}</th>
+            </tr></thead>
+            <tbody>
+                ${filtrados.map(p => {
+                    const ui = ESTADO_UI[estadoStock(p.cantidadDisponible)];
+                    return `
+                        <tr>
+                            <td><div class="cell-main"><div><strong>${esc(p.nombreProducto)}</strong><small>${esc(p.codigoProducto)}</small></div></div></td>
+                            <td><span class="badge ${ui.badge}">${tr(ui.texto)}</span></td>
+                            <td class="num">${celdaStock(p.cantidadDisponible, maximo)}</td>
+                        </tr>`;
+                }).join('')}
+            </tbody>
+        </table>`;
+}
 
 // =========================================================================
-// Módulo: Modales para Aumentar y Disminuir Stock
+// Bodega e Inventario
+// =========================================================================
+
+function configurarBodegaInventario() {
+    $('btnRefrescarInventario').addEventListener('click', cargarInventarioBodega);
+    $('filtroInventario').addEventListener('input', renderizarInventario);
+    $('btnCerrarProveedor').addEventListener('click', () => proveedorCard.classList.add('hidden'));
+
+    document.querySelectorAll('#filtroEstadoInventario .seg').forEach(seg => {
+        seg.addEventListener('click', () => {
+            state.filtroEstado = seg.dataset.estado;
+            document.querySelectorAll('#filtroEstadoInventario .seg').forEach(s => s.classList.toggle('active', s === seg));
+            renderizarInventario();
+        });
+    });
+
+    inventarioContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-accion]');
+        if (!btn) return;
+        const item = (state.ultimoInventario || []).find(i => i.codigoProducto === btn.dataset.codigo);
+        if (!item) return;
+        if (btn.dataset.accion === 'entrada') abrirModal('entrada', item);
+        if (btn.dataset.accion === 'salida') abrirModal('salida', item);
+        if (btn.dataset.accion === 'proveedor') identificarProveedor(item);
+    });
+}
+
+async function cargarInventarioBodega() {
+    placeholder(inventarioContainer, tr('bodega.loading'));
+    try {
+        const { ok, data } = await api('/bodega/existencias?incluirAgotados=true');
+        if (ok) {
+            state.ultimoInventario = data.datos;
+            state.ultimosProductos = null; // el catálogo de ventas se recarga con el nuevo stock
+            renderizarInventario();
+        } else {
+            placeholder(inventarioContainer, data.mensaje, true);
+        }
+    } catch {
+        placeholder(inventarioContainer, tr('msg.conn.error'), true);
+    }
+}
+
+function renderizarInventario() {
+    const inventario = state.ultimoInventario || [];
+
+    const conteo = { todos: inventario.length, disponible: 0, bajo: 0, agotado: 0 };
+    inventario.forEach(i => conteo[estadoStock(i.cantidadDisponible)]++);
+    // "Disponibles" incluye todo lo que tiene stock, también lo que está bajo
+    conteo.disponible += conteo.bajo;
+    document.querySelectorAll('#filtroEstadoInventario [data-count]').forEach(b => { b.textContent = conteo[b.dataset.count]; });
+
+    if (inventario.length === 0) return placeholder(inventarioContainer, tr('bodega.empty'));
+
+    const filtro = normalizar($('filtroInventario').value.trim());
+    const filtrados = inventario.filter(i => {
+        const estado = estadoStock(i.cantidadDisponible);
+        const coincideEstado = state.filtroEstado === 'todos'
+            || estado === state.filtroEstado
+            || (state.filtroEstado === 'disponible' && estado === 'bajo');
+        return coincideEstado && normalizar(`${i.codigoProducto} ${i.nombreProducto}`).includes(filtro);
+    });
+    if (filtrados.length === 0) return placeholder(inventarioContainer, tr('common.no.results'));
+
+    const maximo = Math.max(...inventario.map(i => i.cantidadDisponible));
+    inventarioContainer.innerHTML = `
+        <table>
+            <thead><tr>
+                <th>${tr('bodega.th.name')}</th>
+                <th>${tr('bodega.th.status')}</th>
+                <th class="num">${tr('bodega.th.stock')}</th>
+                <th></th>
+            </tr></thead>
+            <tbody>
+                ${filtrados.map(item => {
+                    const estado = estadoStock(item.cantidadDisponible);
+                    const ui = ESTADO_UI[estado];
+                    const codigo = esc(item.codigoProducto);
+                    return `
+                        <tr>
+                            <td><div class="cell-main"><div><strong>${esc(item.nombreProducto)}</strong><small>${codigo}</small></div></div></td>
+                            <td><span class="badge ${ui.badge}">${tr(ui.texto)}</span></td>
+                            <td class="num">${celdaStock(item.cantidadDisponible, maximo)}</td>
+                            <td class="actions">
+                                ${estado === 'agotado' ? `<button class="btn-link" data-accion="proveedor" data-codigo="${codigo}">${tr('bodega.btn.proveedor')}</button>` : ''}
+                                ${estado !== 'agotado' ? `<button class="btn-link danger" data-accion="salida" data-codigo="${codigo}">${tr('bodega.btn.retirar')}</button>` : ''}
+                                <button class="btn btn-secondary btn-sm" data-accion="entrada" data-codigo="${codigo}">${tr('bodega.btn.recargar')}</button>
+                            </td>
+                        </tr>`;
+                }).join('')}
+            </tbody>
+        </table>`;
+}
+
+async function identificarProveedor(item) {
+    try {
+        const { ok, data } = await api(`/bodega/productos/${encodeURIComponent(item.codigoProducto)}/proveedor-reposicion`);
+        if (!ok) return mostrarToast(data.mensaje, 'error');
+
+        $('provCodigo').textContent = data.datos.codigo;
+        $('provNombre').textContent = data.datos.nombre;
+        $('provProducto').textContent = `${item.nombreProducto} (${item.codigoProducto})`;
+        proveedorCard.classList.remove('hidden');
+        proveedorCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } catch {
+        mostrarToast(tr('msg.conn.error'), 'error');
+    }
+}
+
+// =========================================================================
+// Modales de entrada / salida de stock
 // =========================================================================
 
 function configurarModales() {
-    // Cerrar al pulsar botón 'X' o botón 'Cancelar'
-    document.querySelectorAll('.btn-cerrar-modal').forEach(btn => {
-        btn.addEventListener('click', cerrarModales);
-    });
-
-    // Cerrar al hacer clic en el fondo oscuro
+    document.querySelectorAll('.btn-cerrar-modal').forEach(btn => btn.addEventListener('click', cerrarModales));
     [modalRecargarStock, modalSalidaStock].forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) cerrarModales();
+        modal.addEventListener('click', (e) => { if (e.target === modal) cerrarModales(); });
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarModales(); });
+
+    document.querySelectorAll('.step').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const input = $(btn.dataset.target);
+            const valor = (parseInt(input.value, 10) || 0) + Number(btn.dataset.step);
+            input.value = Math.min(Number(input.max), Math.max(1, valor));
+            actualizarVistaPrevia();
         });
     });
+    [inputCantidadRecargar, inputCantidadSalida].forEach(i => i.addEventListener('input', actualizarVistaPrevia));
 
-    // Cerrar al presionar tecla Escape
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') cerrarModales();
-    });
-
-    // Formulario Aumentar Stock (Ingreso de Mercancía)
-    formRecargarStock.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!state.productoSeleccionadoModal) return;
-
-        const cantidad = parseInt(inputCantidadRecargar.value, 10);
-        if (isNaN(cantidad) || cantidad <= 0) {
-            mostrarToast('Por favor ingrese una cantidad válida mayor a cero', 'error');
-            return;
-        }
-
-        try {
-            const codigo = state.productoSeleccionadoModal.codigo;
-            const response = await fetch(`${API_BASE}/bodega/productos/${encodeURIComponent(codigo)}/entrada?cantidad=${cantidad}`, {
-                method: 'POST',
-                headers: getHeaders()
-            });
-
-            const data = await response.json();
-            if (response.ok && data.exitoso) {
-                mostrarToast(data.mensaje, 'success');
-                proveedorCard.classList.add('hidden');
-                cerrarModales();
-                cargarInventarioBodega();
-            } else {
-                mostrarToast(data.mensaje, 'error');
-            }
-        } catch (error) {
-            mostrarToast(t('msg.conn.error', state.idioma), 'error');
-        }
-    });
-
-    // Formulario Disminuir Stock (Salida de Mercancía)
-    formSalidaStock.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!state.productoSeleccionadoModal) return;
-
-        const cantidad = parseInt(inputCantidadSalida.value, 10);
-        if (isNaN(cantidad) || cantidad <= 0) {
-            mostrarToast('Por favor ingrese una cantidad válida mayor a cero', 'error');
-            return;
-        }
-
-        try {
-            const codigo = state.productoSeleccionadoModal.codigo;
-            const response = await fetch(`${API_BASE}/bodega/productos/${encodeURIComponent(codigo)}/salida?cantidad=${cantidad}`, {
-                method: 'POST',
-                headers: getHeaders()
-            });
-
-            const data = await response.json();
-            if (response.ok && data.exitoso) {
-                mostrarToast(data.mensaje, 'success');
-                cerrarModales();
-                cargarInventarioBodega();
-            } else {
-                mostrarToast(data.mensaje, 'error');
-            }
-        } catch (error) {
-            mostrarToast(t('msg.conn.error', state.idioma), 'error');
-        }
-    });
+    $('formRecargarStock').addEventListener('submit', (e) => { e.preventDefault(); registrarMovimiento('entrada', inputCantidadRecargar); });
+    $('formSalidaStock').addEventListener('submit', (e) => { e.preventDefault(); registrarMovimiento('salida', inputCantidadSalida); });
 }
 
-window.abrirModalRecargar = function(codigo, nombre, stock) {
-    state.productoSeleccionadoModal = { codigo, nombre, stock };
-    modalRecargarProductoCodigo.textContent = codigo;
-    modalRecargarProductoNombre.textContent = nombre;
-    modalRecargarStockActual.textContent = `${stock} ${t('table.units', state.idioma)}`;
-    inputCantidadRecargar.value = '25';
+function abrirModal(tipo, item) {
+    const esEntrada = tipo === 'entrada';
+    const pre = esEntrada ? 'modalRecargar' : 'modalSalida';
+    const input = esEntrada ? inputCantidadRecargar : inputCantidadSalida;
 
-    modalRecargarStock.classList.remove('hidden');
-    inputCantidadRecargar.focus();
-};
+    state.productoSeleccionadoModal = { codigo: item.codigoProducto, nombre: item.nombreProducto, stock: item.cantidadDisponible, tipo };
+    $(`${pre}ProductoNombre`).textContent = item.nombreProducto;
+    $(`${pre}ProductoCodigo`).textContent = item.codigoProducto;
+    $(`${pre}StockActual`).textContent = item.cantidadDisponible;
+    input.value = esEntrada ? 25 : 1;
+    if (!esEntrada) input.max = item.cantidadDisponible;
+    actualizarVistaPrevia();
 
-window.abrirModalSalida = function(codigo, nombre, stock) {
-    state.productoSeleccionadoModal = { codigo, nombre, stock };
-    modalSalidaProductoCodigo.textContent = codigo;
-    modalSalidaProductoNombre.textContent = nombre;
-    modalSalidaStockActual.textContent = `${stock} ${t('table.units', state.idioma)}`;
-    inputCantidadSalida.value = '1';
-    inputCantidadSalida.max = stock;
+    (esEntrada ? modalRecargarStock : modalSalidaStock).classList.remove('hidden');
+    input.focus();
+    input.select();
+}
 
-    modalSalidaStock.classList.remove('hidden');
-    inputCantidadSalida.focus();
-};
+function actualizarVistaPrevia() {
+    const p = state.productoSeleccionadoModal;
+    if (!p) return;
+    const esEntrada = p.tipo === 'entrada';
+    const cantidad = parseInt((esEntrada ? inputCantidadRecargar : inputCantidadSalida).value, 10) || 0;
+    const nuevo = esEntrada ? p.stock + cantidad : p.stock - cantidad;
+    $(esEntrada ? 'modalRecargarStockNuevo' : 'modalSalidaStockNuevo').textContent = nuevo < 0 ? '—' : nuevo;
+}
+
+async function registrarMovimiento(tipo, input) {
+    const p = state.productoSeleccionadoModal;
+    if (!p) return;
+
+    const cantidad = parseInt(input.value, 10);
+    if (isNaN(cantidad) || cantidad <= 0) return mostrarToast(tr('modal.invalid'), 'error');
+    if (tipo === 'salida' && cantidad > p.stock) return mostrarToast(tr('modal.too.many'), 'error');
+
+    try {
+        const { ok, data } = await api(`/bodega/productos/${encodeURIComponent(p.codigo)}/${tipo}?cantidad=${cantidad}`, { method: 'POST' });
+        mostrarToast(data.mensaje, ok ? 'success' : 'error');
+        if (!ok) return;
+        if (tipo === 'entrada') proveedorCard.classList.add('hidden');
+        cerrarModales();
+        cargarInventarioBodega();
+    } catch {
+        mostrarToast(tr('msg.conn.error'), 'error');
+    }
+}
 
 function cerrarModales() {
     modalRecargarStock.classList.add('hidden');
@@ -831,21 +732,20 @@ function cerrarModales() {
 }
 
 // =========================================================================
-// Mensajes Flotantes (Toasts)
+// Notificaciones
 // =========================================================================
 
-function mostrarToast(mensaje, tipo = 'info') {
-    const container = document.getElementById('toastContainer');
+function mostrarToast(mensaje, tipo = 'success') {
+    if (!mensaje) return;
     const toast = document.createElement('div');
     toast.className = `toast ${tipo}`;
-    toast.innerHTML = `<span>${tipo === 'success' ? '✓' : '✕'}</span> ${mensaje}`;
-
-    container.appendChild(toast);
+    toast.setAttribute('role', tipo === 'error' ? 'alert' : 'status');
+    toast.innerHTML = `<span class="dot"></span><span>${esc(mensaje)}</span>`;
+    $('toastContainer').appendChild(toast);
 
     setTimeout(() => {
+        toast.style.transition = 'opacity 0.25s ease';
         toast.style.opacity = '0';
-        toast.style.transform = 'translateY(-10px)';
-        toast.style.transition = 'all 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
+        setTimeout(() => toast.remove(), 250);
+    }, 3500);
 }

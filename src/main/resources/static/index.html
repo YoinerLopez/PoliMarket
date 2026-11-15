@@ -4,213 +4,272 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PoliMarket</title>
-    <link rel="stylesheet" href="css/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
+    <!-- Iconos reutilizables (SVG sprite) -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+        <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5"/></symbol>
+        <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.27 6.96 12 12.01l8.73-5.05M12 22.08V12"/></symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></symbol>
+        <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M6.5 17A2.5 2.5 0 0 0 4 19.5 2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+        <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+        <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h7.6a2 2 0 0 0 2-1.6L21 7H6"/></symbol>
+        <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+        <symbol id="i-truck" viewBox="0 0 24 24"><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></symbol>
+        <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    </svg>
+
     <!-- Header Principal -->
     <header class="header">
-        <div class="header-container">
-            <div class="logo">
-                <span class="logo-icon">🛒</span>
-                <div>
-                    <h1 data-i18n="app.title">PoliMarket</h1>
-                    <p class="subtitle" data-i18n="app.subtitle">Plataforma de Gestión Comercial y Bodega</p>
-                </div>
+        <div class="logo">
+            <span class="logo-icon"><svg class="ico"><use href="#i-cart"/></svg></span>
+            <div>
+                <h1 data-i18n="app.title">PoliMarket</h1>
+                <p class="subtitle" data-i18n="app.subtitle">Gestión comercial y bodega</p>
             </div>
-            <div class="header-actions">
-                <div class="lang-selector">
-                    <label for="langSelect" data-i18n="lang.label">🌐 Idioma / Language:</label>
-                    <select id="langSelect">
-                        <option value="es" selected>Español (ES)</option>
-                        <option value="en">English (EN)</option>
-                    </select>
-                </div>
-                <div id="userSessionHeader" class="user-session-bar hidden">
-                    <span data-i18n="login.welcome">Sesión activa:</span>
+        </div>
+        <div class="header-actions">
+            <label class="lang-selector" for="langSelect">
+                <svg class="ico"><use href="#i-globe"/></svg>
+                <span class="sr-only" data-i18n="lang.label">Idioma</span>
+                <select id="langSelect">
+                    <option value="es" selected>Español</option>
+                    <option value="en">English</option>
+                </select>
+            </label>
+            <div id="userSessionHeader" class="user-session-bar hidden">
+                <span class="user-avatar" id="sessionUserAvatar">A</span>
+                <span class="user-meta">
                     <strong id="sessionUserName">acastro</strong>
-                    <button id="btnLogout" class="btn btn-secondary btn-sm" data-i18n="login.btn.logout">Cerrar Sesión</button>
-                </div>
-                <a href="/swagger-ui.html" target="_blank" class="btn btn-secondary btn-sm">📖 Swagger UI</a>
+                    <small id="sessionUserRole"></small>
+                </span>
+                <button id="btnLogout" class="btn btn-ghost btn-icon" type="button">
+                    <svg class="ico"><use href="#i-logout"/></svg>
+                    <span class="btn-label" data-i18n="login.btn.logout">Cerrar sesión</span>
+                </button>
             </div>
         </div>
     </header>
 
     <!-- Notificaciones Flotantes -->
-    <div id="toastContainer" class="toast-container"></div>
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
 
     <!-- ============================================================== -->
-    <!-- VISTA 1: INICIO DE SESIÓN (LOGIN) -->
+    <!-- VISTA 1: INICIO DE SESIÓN -->
     <!-- ============================================================== -->
     <div id="loginView" class="login-wrapper">
         <div class="login-card">
             <div class="login-header">
-                <span class="login-avatar">🔐</span>
-                <h2 data-i18n="login.title">Iniciar Sesión</h2>
-                <p data-i18n="login.subtitle">Ingrese sus credenciales de vendedor para acceder a la plataforma.</p>
+                <h2 data-i18n="login.title">Bienvenido de nuevo</h2>
+                <p data-i18n="login.subtitle">Ingresa con tu usuario para continuar.</p>
             </div>
             <form id="loginForm" class="login-form">
                 <div class="form-group">
-                    <label for="loginUsername" data-i18n="login.user.label">Usuario:</label>
-                    <input type="text" id="loginUsername" data-i18n-placeholder="login.user.placeholder" placeholder="Ej: acastro" required>
+                    <label for="loginUsername" data-i18n="login.user.label">Usuario</label>
+                    <input type="text" id="loginUsername" autocomplete="username" data-i18n-placeholder="login.user.placeholder" placeholder="ej. acastro" required>
                 </div>
                 <div class="form-group">
-                    <label for="loginPassword" data-i18n="login.pass.label">Contraseña:</label>
-                    <input type="password" id="loginPassword" data-i18n-placeholder="login.pass.placeholder" placeholder="Ingrese su contraseña" required>
+                    <label for="loginPassword" data-i18n="login.pass.label">Contraseña</label>
+                    <input type="password" id="loginPassword" autocomplete="current-password" data-i18n-placeholder="login.pass.placeholder" placeholder="Tu contraseña" required>
                 </div>
-                <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-block" data-i18n="login.btn">
-                    Ingresar a la Plataforma
-                </button>
+                <div id="loginErrorBox" class="alert alert-error hidden" role="alert"></div>
+                <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-block" data-i18n="login.btn">Ingresar</button>
             </form>
 
-            <div id="loginErrorBox" class="resultado-box error hidden"></div>
+            <div class="login-quick">
+                <p class="login-quick-title" data-i18n="login.quick">Cuentas de prueba</p>
+                <div class="login-quick-list">
+                    <button type="button" class="login-quick-btn" data-user="admin.rrhh">
+                        <span class="user-avatar">A</span>
+                        <span><strong>admin.rrhh</strong><small data-i18n="login.quick.rrhh">Recursos Humanos</small></span>
+                    </button>
+                    <button type="button" class="login-quick-btn" data-user="acastro">
+                        <span class="user-avatar">A</span>
+                        <span><strong>acastro</strong><small data-i18n="login.quick.seller">Vendedor autorizado</small></span>
+                    </button>
+                    <button type="button" class="login-quick-btn" data-user="jperez">
+                        <span class="user-avatar muted">J</span>
+                        <span><strong>jperez</strong><small data-i18n="login.quick.pending">Vendedor sin autorizar</small></span>
+                    </button>
+                </div>
+                <p class="hint" data-i18n="login.quick.note">Toca una cuenta para llenar el formulario. Contraseña: password123</p>
+            </div>
         </div>
     </div>
 
     <!-- ============================================================== -->
-    <!-- VISTA 2: APLICACIÓN COMPLETA (PROTEGIDA POR SESIÓN) -->
+    <!-- VISTA 2: APLICACIÓN (PROTEGIDA POR SESIÓN) -->
     <!-- ============================================================== -->
-    <div id="appView" class="hidden">
+    <div id="appView" class="app-shell hidden">
 
-        <!-- Barra de Navegación por Módulos -->
-        <nav class="nav-tabs">
-            <div class="nav-container">
-                <button class="nav-tab active" data-tab="ventas-clientes">
-                    <span class="icon">🤝</span> <span data-i18n="nav.clientes">Clientes Potenciales</span>
-                </button>
-                <button class="nav-tab" data-tab="ventas-productos">
-                    <span class="icon">📦</span> <span data-i18n="nav.productos">Productos Disponibles</span>
-                </button>
-                <button class="nav-tab" data-tab="bodega-inventario">
-                    <span class="icon">🏭</span> <span data-i18n="nav.bodega">Bodega e Inventario</span>
-                </button>
-                <button class="nav-tab" data-tab="rrhh">
-                    <span class="icon">👥</span> <span data-i18n="nav.rrhh">Recursos Humanos</span>
-                </button>
-            </div>
+        <!-- Menú lateral por áreas de negocio -->
+        <nav class="sidebar" aria-label="Módulos">
+            <p class="nav-section" data-i18n="nav.section.ventas">Ventas</p>
+            <button class="nav-tab active" data-tab="ventas-clientes" type="button">
+                <svg class="ico"><use href="#i-users"/></svg>
+                <span data-i18n="nav.clientes">Clientes</span>
+            </button>
+            <button class="nav-tab" data-tab="ventas-productos" type="button">
+                <svg class="ico"><use href="#i-tag"/></svg>
+                <span data-i18n="nav.productos">Catálogo de venta</span>
+            </button>
+
+            <p class="nav-section" data-i18n="nav.section.operacion">Operación</p>
+            <button class="nav-tab" data-tab="bodega-inventario" type="button">
+                <svg class="ico"><use href="#i-box"/></svg>
+                <span data-i18n="nav.bodega">Inventario</span>
+            </button>
+
+            <p class="nav-section" id="navSectionAdmin" data-i18n="nav.section.admin">Administración</p>
+            <button class="nav-tab" id="navTabRrhh" data-tab="rrhh" type="button">
+                <svg class="ico"><use href="#i-shield"/></svg>
+                <span data-i18n="nav.rrhh">Vendedores</span>
+            </button>
+
+            <a href="/swagger-ui.html" target="_blank" rel="noopener" class="nav-tab nav-link-bottom">
+                <svg class="ico"><use href="#i-book"/></svg>
+                <span data-i18n="nav.api">Documentación API</span>
+            </a>
         </nav>
 
-        <!-- Contenido Principal -->
         <main class="main-container">
 
-            <!-- ============================================================== -->
             <!-- PANEL: Ventas - Clientes Potenciales -->
-            <!-- ============================================================== -->
             <section id="panel-ventas-clientes" class="tab-panel active">
-                <div class="card">
-                    <div class="card-header">
-                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-                            <div>
-                                <h2 data-i18n="ventas.clientes.title">Cartera de Clientes Potenciales y Contacto</h2>
-                                <p data-i18n="ventas.clientes.desc">Listado de posibles clientes y datos de contacto asignados a su cuenta comercial.</p>
-                            </div>
-                            <button id="btnConsultarClientes" class="btn btn-primary" data-i18n="ventas.clientes.btn.consultar">
-                                🔍 Consultar Cartera
-                            </button>
-                        </div>
+                <div class="page-header">
+                    <div>
+                        <h2 data-i18n="ventas.clientes.title">Clientes potenciales</h2>
+                        <p data-i18n="ventas.clientes.desc">Tu cartera de posibles clientes con sus datos de contacto.</p>
                     </div>
-                    <div class="card-body">
-                        <!-- Listado de Clientes con Contacto Enriquecido -->
-                        <div id="clientesContainer" class="grid-cards">
-                            <p class="placeholder-text" data-i18n="ventas.clientes.placeholder">Presione "Consultar Cartera" para desplegar los contactos.</p>
-                        </div>
+                    <button id="btnConsultarClientes" class="btn btn-secondary" type="button">
+                        <svg class="ico"><use href="#i-refresh"/></svg>
+                        <span data-i18n="ventas.clientes.btn.consultar">Actualizar</span>
+                    </button>
+                </div>
+                <div class="card">
+                    <div class="toolbar">
+                        <label class="search-box">
+                            <svg class="ico"><use href="#i-search"/></svg>
+                            <input type="search" id="filtroCliente" data-i18n-placeholder="ventas.clientes.search" placeholder="Buscar por empresa, correo o teléfono…">
+                        </label>
+                        <select id="filtroCiudad" class="select">
+                            <option value="" data-i18n="ventas.clientes.allCities">Todas las ciudades</option>
+                        </select>
+                    </div>
+                    <div id="clientesContainer" class="table-responsive">
+                        <p class="placeholder-text" data-i18n="ventas.clientes.loading">Cargando clientes…</p>
                     </div>
                 </div>
             </section>
 
-            <!-- ============================================================== -->
             <!-- PANEL: Ventas - Productos Disponibles -->
-            <!-- ============================================================== -->
             <section id="panel-ventas-productos" class="tab-panel">
-                <div class="card">
-                    <div class="card-header">
-                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
-                            <div>
-                                <h2 data-i18n="ventas.productos.title">Catálogo de Productos Disponibles para Venta</h2>
-                                <p data-i18n="ventas.productos.desc">Muestra los artículos con existencias en bodega mayores a cero.</p>
-                            </div>
-                            <button id="btnConsultarProductos" class="btn btn-primary" data-i18n="ventas.productos.btn.consultar">
-                                📦 Consultar Productos Disponibles
-                            </button>
-                        </div>
+                <div class="page-header">
+                    <div>
+                        <h2 data-i18n="ventas.productos.title">Catálogo de venta</h2>
+                        <p data-i18n="ventas.productos.desc">Productos con existencias en bodega, listos para ofrecer a tus clientes.</p>
                     </div>
-                    <div class="card-body">
-                        <!-- Tabla de Productos Disponibles -->
-                        <div id="productosContainer" class="table-responsive">
-                            <p class="placeholder-text" data-i18n="ventas.productos.placeholder">Presione "Consultar Productos Disponibles" para cargar el catálogo.</p>
-                        </div>
+                    <button id="btnConsultarProductos" class="btn btn-secondary" type="button">
+                        <svg class="ico"><use href="#i-refresh"/></svg>
+                        <span data-i18n="ventas.productos.btn.consultar">Actualizar</span>
+                    </button>
+                </div>
+                <div class="card">
+                    <div class="toolbar">
+                        <label class="search-box">
+                            <svg class="ico"><use href="#i-search"/></svg>
+                            <input type="search" id="filtroProducto" data-i18n-placeholder="ventas.productos.search" placeholder="Buscar por código o nombre…">
+                        </label>
+                    </div>
+                    <div id="productosContainer" class="table-responsive">
+                        <p class="placeholder-text" data-i18n="ventas.productos.loading">Consultando existencias en bodega…</p>
                     </div>
                 </div>
             </section>
 
-            <!-- ============================================================== -->
             <!-- PANEL: Bodega e Inventario -->
-            <!-- ============================================================== -->
             <section id="panel-bodega-inventario" class="tab-panel">
+                <div class="page-header">
+                    <div>
+                        <h2 data-i18n="bodega.panel.title">Inventario</h2>
+                        <p data-i18n="bodega.panel.desc">Revisa existencias, registra entradas y salidas, y encuentra a quién pedir reposición.</p>
+                    </div>
+                    <button id="btnRefrescarInventario" class="btn btn-secondary" type="button">
+                        <svg class="ico"><use href="#i-refresh"/></svg>
+                        <span data-i18n="bodega.btn.refrescar">Actualizar</span>
+                    </button>
+                </div>
+
+                <div id="proveedorCard" class="supplier-banner hidden" role="status">
+                    <span class="supplier-icon"><svg class="ico"><use href="#i-truck"/></svg></span>
+                    <div>
+                        <p class="supplier-title" data-i18n="bodega.modal.prov.title">Proveedor para reposición</p>
+                        <p class="supplier-name"><span id="provNombre"></span> · <code id="provCodigo"></code></p>
+                        <p class="supplier-product" id="provProducto"></p>
+                    </div>
+                    <button type="button" id="btnCerrarProveedor" class="btn btn-ghost btn-icon" aria-label="Cerrar">
+                        <svg class="ico"><use href="#i-x"/></svg>
+                    </button>
+                </div>
+
                 <div class="card">
-                    <div class="card-header">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
-                            <div>
-                                <h2 data-i18n="bodega.panel.title">Gestión de Bodega e Inventario</h2>
-                                <p data-i18n="bodega.panel.desc">Control de existencias: consulta el inventario completo, identifica proveedores para reposición y registra movimientos de salida o recarga.</p>
-                            </div>
-                            <button id="btnRefrescarInventario" class="btn btn-secondary" data-i18n="bodega.btn.refrescar">
-                                🔄 Refrescar Inventario
-                            </button>
+                    <div class="toolbar">
+                        <label class="search-box">
+                            <svg class="ico"><use href="#i-search"/></svg>
+                            <input type="search" id="filtroInventario" data-i18n-placeholder="bodega.search" placeholder="Buscar por código o nombre…">
+                        </label>
+                        <div class="segmented" id="filtroEstadoInventario" role="group">
+                            <button type="button" class="seg active" data-estado="todos"><span data-i18n="bodega.filter.all">Todos</span> <b data-count="todos">0</b></button>
+                            <button type="button" class="seg" data-estado="disponible"><span data-i18n="bodega.filter.available">Disponibles</span> <b data-count="disponible">0</b></button>
+                            <button type="button" class="seg" data-estado="bajo"><span data-i18n="bodega.filter.low">Stock bajo</span> <b data-count="bajo">0</b></button>
+                            <button type="button" class="seg" data-estado="agotado"><span data-i18n="bodega.filter.out">Agotados</span> <b data-count="agotado">0</b></button>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <div id="proveedorCard" class="card hidden" style="background:#f0fdf4; border:1px solid #86efac; margin-bottom:1.5rem;">
-                            <h3 style="color:#166534; font-size:1.1rem; margin-bottom:0.5rem;" data-i18n="bodega.modal.prov.title">Proveedor Asignado para Reposición</h3>
-                            <p><strong><span data-i18n="bodega.modal.prov.code">Código:</span></strong> <code id="provCodigo"></code></p>
-                            <p><strong><span data-i18n="bodega.modal.prov.name">Empresa:</span></strong> <span id="provNombre"></span></p>
-                        </div>
-
-                        <!-- Tabla de Inventario de Bodega -->
-                        <div id="inventarioContainer" class="table-responsive">
-                            <p class="placeholder-text">Cargando inventario de bodega...</p>
-                        </div>
+                    <div id="inventarioContainer" class="table-responsive">
+                        <p class="placeholder-text" data-i18n="bodega.loading">Cargando inventario…</p>
                     </div>
                 </div>
             </section>
 
-            <!-- ============================================================== -->
             <!-- PANEL: Recursos Humanos -->
-            <!-- ============================================================== -->
             <section id="panel-rrhh" class="tab-panel">
-                <div class="card">
-                    <div class="card-header">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
-                            <div>
-                                <h2 data-i18n="rrhh.panel.title">Gestión y Autorización de Vendedores</h2>
-                                <p data-i18n="rrhh.panel.desc">Administre las autorizaciones y permisos de acceso para los vendedores y personal comercial.</p>
-                            </div>
-                            <button id="btnRefrescarVendedores" class="btn btn-secondary" data-i18n="rrhh.btn.refrescar">
-                                🔄 Actualizar Lista
-                            </button>
-                        </div>
+                <div class="page-header">
+                    <div>
+                        <h2 data-i18n="rrhh.panel.title">Vendedores</h2>
+                        <p data-i18n="rrhh.panel.desc">Autoriza o revoca el acceso de los vendedores a los sistemas de la empresa.</p>
                     </div>
-                    <div class="card-body">
-                        <!-- Aviso de Acceso Restringido (para usuarios sin rol RRHH) -->
-                        <div id="rrhhRestrictedNotice" class="restricted-box hidden">
-                            <div class="restricted-icon">🔒</div>
-                            <h3 data-i18n="rrhh.restricted.title">Acceso Exclusivo de Recursos Humanos</h3>
-                            <p data-i18n="rrhh.restricted.desc">Su cuenta actual no tiene asignado el permiso de Recursos Humanos. Para gestionar y autorizar vendedores, inicie sesión con la cuenta admin.rrhh.</p>
+                    <button id="btnRefrescarVendedores" class="btn btn-secondary" type="button">
+                        <svg class="ico"><use href="#i-refresh"/></svg>
+                        <span data-i18n="rrhh.btn.refrescar">Actualizar</span>
+                    </button>
+                </div>
+
+                <div id="rrhhRestrictedNotice" class="card empty-state hidden">
+                    <svg class="ico ico-xl"><use href="#i-lock"/></svg>
+                    <h3 data-i18n="rrhh.restricted.title">Solo para Recursos Humanos</h3>
+                    <p data-i18n="rrhh.restricted.desc">Tu cuenta no tiene permisos para gestionar vendedores.</p>
+                </div>
+
+                <div id="rrhhAdminContent">
+                    <div class="stats" id="rrhhStats"></div>
+                    <div class="card">
+                        <div class="toolbar">
+                            <label class="search-box">
+                                <svg class="ico"><use href="#i-search"/></svg>
+                                <input type="search" id="filtroVendedor" data-i18n-placeholder="rrhh.filter.placeholder" placeholder="Buscar vendedor…">
+                            </label>
                         </div>
-
-                        <!-- Contenedor Principal de Administración de Vendedores -->
-                        <div id="rrhhAdminContent">
-                            <div class="table-filter-bar">
-                                <input type="text" id="filtroVendedor" class="table-filter-input" data-i18n-placeholder="rrhh.filter.placeholder" placeholder="🔍 Filtrar usuario por nombre...">
-                            </div>
-
-                            <!-- Tabla de Vendedores con Autorizar / Revocar -->
-                            <div id="tablaVendedoresContainer" class="table-responsive">
-                                <p class="placeholder-text">Cargando nómina de vendedores...</p>
-                            </div>
+                        <div id="tablaVendedoresContainer" class="table-responsive">
+                            <p class="placeholder-text">…</p>
                         </div>
                     </div>
                 </div>
@@ -219,57 +278,75 @@
         </main>
     </div>
 
-    <!-- ============================================================== -->
-    <!-- MODAL: Aumentar Stock (Recargar Inventario) -->
-    <!-- ============================================================== -->
+    <!-- MODAL: Registrar entrada -->
     <div id="modalRecargarStock" class="modal-backdrop hidden">
-        <div class="modal-container">
+        <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="tituloModalRecargar">
             <div class="modal-header">
-                <h3 data-i18n="modal.recargar.title">Aumentar Stock / Abastecer Inventario</h3>
-                <button type="button" class="modal-close-btn btn-cerrar-modal">&times;</button>
+                <h3 id="tituloModalRecargar" data-i18n="modal.recargar.title">Registrar entrada</h3>
+                <button type="button" class="modal-close-btn btn-cerrar-modal" aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button>
             </div>
             <form id="formRecargarStock">
                 <div class="modal-body">
                     <div class="modal-product-info">
-                        <p><strong><span data-i18n="modal.product">Producto:</span></strong> <span id="modalRecargarProductoNombre"></span> (<code id="modalRecargarProductoCodigo"></code>)</p>
-                        <p><strong><span data-i18n="modal.current.stock">Stock Actual:</span></strong> <span id="modalRecargarStockActual" class="badge"></span></p>
+                        <div>
+                            <small data-i18n="modal.product">Producto</small>
+                            <p><strong id="modalRecargarProductoNombre"></strong> <code id="modalRecargarProductoCodigo"></code></p>
+                        </div>
+                        <div class="stock-flow">
+                            <div><small data-i18n="modal.current.stock">Existencias actuales</small><b id="modalRecargarStockActual"></b></div>
+                            <span class="arrow">→</span>
+                            <div><small data-i18n="modal.result.stock">Quedarán</small><b id="modalRecargarStockNuevo" class="up"></b></div>
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label for="inputCantidadRecargar" data-i18n="modal.recargar.label">Cantidad de unidades a ingresar:</label>
-                        <input type="number" id="inputCantidadRecargar" min="1" max="10000" step="1" value="25" required>
+                        <label for="inputCantidadRecargar" data-i18n="modal.recargar.label">Unidades que ingresan</label>
+                        <div class="stepper">
+                            <button type="button" class="step" data-step="-1" data-target="inputCantidadRecargar" aria-label="-1">−</button>
+                            <input type="number" id="inputCantidadRecargar" min="1" max="10000" step="1" value="25" required>
+                            <button type="button" class="step" data-step="1" data-target="inputCantidadRecargar" aria-label="+1">+</button>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-cerrar-modal" data-i18n="modal.btn.cancel">Cancelar</button>
-                    <button type="submit" class="btn btn-success" data-i18n="modal.recargar.btn">✓ Confirmar Ingreso</button>
+                    <button type="submit" class="btn btn-primary" data-i18n="modal.recargar.btn">Confirmar entrada</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- ============================================================== -->
-    <!-- MODAL: Disminuir Stock (Salida de Mercancía) -->
-    <!-- ============================================================== -->
+    <!-- MODAL: Registrar salida -->
     <div id="modalSalidaStock" class="modal-backdrop hidden">
-        <div class="modal-container">
+        <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="tituloModalSalida">
             <div class="modal-header">
-                <h3 data-i18n="modal.salida.title">Disminuir Stock / Registrar Salida</h3>
-                <button type="button" class="modal-close-btn btn-cerrar-modal">&times;</button>
+                <h3 id="tituloModalSalida" data-i18n="modal.salida.title">Registrar salida</h3>
+                <button type="button" class="modal-close-btn btn-cerrar-modal" aria-label="Cerrar"><svg class="ico"><use href="#i-x"/></svg></button>
             </div>
             <form id="formSalidaStock">
                 <div class="modal-body">
                     <div class="modal-product-info">
-                        <p><strong><span data-i18n="modal.product">Producto:</span></strong> <span id="modalSalidaProductoNombre"></span> (<code id="modalSalidaProductoCodigo"></code>)</p>
-                        <p><strong><span data-i18n="modal.current.stock">Stock Actual:</span></strong> <span id="modalSalidaStockActual" class="badge"></span></p>
+                        <div>
+                            <small data-i18n="modal.product">Producto</small>
+                            <p><strong id="modalSalidaProductoNombre"></strong> <code id="modalSalidaProductoCodigo"></code></p>
+                        </div>
+                        <div class="stock-flow">
+                            <div><small data-i18n="modal.current.stock">Existencias actuales</small><b id="modalSalidaStockActual"></b></div>
+                            <span class="arrow">→</span>
+                            <div><small data-i18n="modal.result.stock">Quedarán</small><b id="modalSalidaStockNuevo" class="down"></b></div>
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label for="inputCantidadSalida" data-i18n="modal.salida.label">Cantidad de unidades a retirar:</label>
-                        <input type="number" id="inputCantidadSalida" min="1" max="1000" step="1" value="1" required>
+                        <label for="inputCantidadSalida" data-i18n="modal.salida.label">Unidades que salen</label>
+                        <div class="stepper">
+                            <button type="button" class="step" data-step="-1" data-target="inputCantidadSalida" aria-label="-1">−</button>
+                            <input type="number" id="inputCantidadSalida" min="1" max="1000" step="1" value="1" required>
+                            <button type="button" class="step" data-step="1" data-target="inputCantidadSalida" aria-label="+1">+</button>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary btn-cerrar-modal" data-i18n="modal.btn.cancel">Cancelar</button>
-                    <button type="submit" class="btn btn-danger" data-i18n="modal.salida.btn">✓ Confirmar Salida</button>
+                    <button type="submit" class="btn btn-danger" data-i18n="modal.salida.btn">Confirmar salida</button>
                 </div>
             </form>
         </div>
